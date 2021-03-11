@@ -57,6 +57,7 @@ __FBSDID("$FreeBSD$");
 #include "opt_mp_watchdog.h"
 #include "opt_perfmon.h"
 #include "opt_platform.h"
+#include "opt_xbox.h"
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -153,6 +154,13 @@ __FBSDID("$FreeBSD$");
 
 #ifdef DEV_ISA
 #include <x86/isa/icu.h>
+#endif
+
+#ifdef XBOX
+#include <machine/xbox.h>
+
+int arch_i386_is_xbox = 0;
+uint32_t arch_i386_xbox_memsize = 0;
 #endif
 
 /* Sanity check for __curthread() */
@@ -1817,6 +1825,18 @@ getmemsize(int first)
 	caddr_t kmdp;
 
 	has_smap = 0;
+#ifdef XBOX
+	if (arch_i386_is_xbox) {
+		/*
+		 * We queried the memory size before, so chop off 4MB for
+		 * the framebuffer and inform the OS of this.
+		 */
+		physmap[0] = 0;
+		physmap[1] = (arch_i386_xbox_memsize * 1024 * 1024) - XBOX_FB_SIZE;
+		physmap_idx = 0;
+		goto physmap_done;
+	}
+#endif
 	bzero(&vmf, sizeof(vmf));
 	bzero(physmap, sizeof(physmap));
 	basemem = 0;
@@ -2396,6 +2416,28 @@ init386(int first)
 	r_idt.rd_limit = sizeof(idt0) - 1;
 	r_idt.rd_base = (int) idt;
 	lidt(&r_idt);
+
+#ifdef XBOX
+	/*
+	 * The following code queries the PCI ID of 0:0:0. For the XBOX,
+	 * This should be 0x10de / 0x02a5.
+	 *
+	 * This is exactly what Linux does.
+	 */
+	out(0xcf8, 0x80000000);
+	if (in1(0xcfc) == 0x02a510de) {
+		arch_i386_is_xbox = 1;
+		pic161_setled(XBOX_LED_GREEN);
+
+		/*
+		 * We are an XBOX, but we may have either 64MB or 128MB of
+		 * memory. The PCI host bridge should be programmed for this
+		 * so we just query it.
+		 */
+		out1(0xcf8, 0x80000084);
+		arch_i386_xbox_memsize = (in1(0xcfc) == 0x7FFFFFF) ? 128 : 64;
+	}
+#endif /* XBOX */
 
 	/*
 	 * Initialize the clock before the console so that console

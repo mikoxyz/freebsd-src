@@ -224,6 +224,10 @@ libkern/strlen.c		standard
 libkern/ucmpdi2.c		standard
 libkern/udivdi3.c		standard
 libkern/umoddi3.c		standard
+i386/xbox/xbox.c		optional
+i386/xbox/xboxfb.c		optional
+dev/fb/boot_font.c		optional
+i386/xbox/pic161.s		optional
 #
 # x86 real mode BIOS support, required by dpms/pci/vesa
 #

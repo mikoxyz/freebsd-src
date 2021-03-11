@@ -49,6 +49,7 @@ __FBSDID("$FreeBSD$");
 #include "opt_npx.h"
 #include "opt_reset.h"
 #include "opt_cpu.h"
+#include "opt_xbox.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -84,6 +85,10 @@ __FBSDID("$FreeBSD$");
 #include <vm/vm_page.h>
 #include <vm/vm_map.h>
 #include <vm/vm_param.h>
+
+#ifdef XBOX
+#include <machine/xbox.h>
+#endif
 
 _Static_assert(__OFFSETOF_MONITORBUF == offsetof(struct pcpu, pc_monitorbuf),
     "__OFFSETOF_MONITORBUF does not correspond with offset of pc_monitorbuf.");
@@ -576,6 +581,14 @@ sf_buf_map(struct sf_buf *sf, int flags)
 	sf_buf_shootdown(sf, flags);
 #endif
 }
+
+#ifdef XBOX
+	if (arch_i386_is_xbox) {
+		/* Kick the PIC16L, it can reboot the box */
+		pic161_reboot();
+		for (;;);
+	}
+#endif
 
 #ifdef SMP
 static void

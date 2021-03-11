@@ -109,6 +109,7 @@ __FBSDID("$FreeBSD$");
 #include "opt_pmap.h"
 #include "opt_smp.h"
 #include "opt_vm.h"
+#include "opt_xbox.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -158,6 +159,9 @@ __FBSDID("$FreeBSD$");
 #include <machine/specialreg.h>
 #ifdef SMP
 #include <machine/smp.h>
+#endif
+#ifdef XBOX
+#include <machine/xbox.h>
 #endif
 #include <machine/pmap_base.h>
 
@@ -712,6 +716,14 @@ __CONCAT(PMTYPE, bootstrap)(vm_paddr_t firstaddr)
 	 * KPTmap is created that can support KVA_PAGES page table pages.
 	 */
 	SYSMAP(pt_entry_t *, KPTD, KPTmap, KVA_PAGES)
+
+	#ifdef XBOX
+		/* FIXME: This is gross, but needed for the XBOX. Since we are in such
+		 * an early stadium, we cannot yet neatly map video memory ... :-(
+		 * Better fixes are very welcome!
+		 */
+		if (!arch_i386_is_xbox)
+	#endif
 
 	for (i = 0; i < NKPT; i++)
 		KPTD[i] = (KPTphys + ptoa(i)) | PG_RW | PG_V;
